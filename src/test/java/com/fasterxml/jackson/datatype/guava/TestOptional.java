@@ -25,6 +25,11 @@ public class TestOptional extends ModuleTestBase
         private Optional<T> myData;
     }
 
+    @JsonAutoDetect(fieldVisibility=Visibility.ANY)
+    public static final class GenericData<T>{
+        private T myData;
+    }
+
     @JsonIdentityInfo(generator=ObjectIdGenerators.IntSequenceGenerator.class)
     public static class Unit
     {
@@ -171,5 +176,62 @@ public class TestOptional extends ModuleTestBase
         for (int i = 0; i < list.size(); ++i) {
             assertEquals("Entry #"+i, list.get(i), result.get(i));
         }
+    }
+
+
+    public void testSerNonNullInOptionalMap() throws Exception {
+        OptionalGenericData<Map<String, Optional<String>>> data = new OptionalGenericData();
+        data.myData = Optional.absent();
+        String value = mapperWithModule().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsString(data);
+        assertEquals("{}", value);
+    }
+
+    public void testSerNonNullInOptionalMapWithOptional() throws Exception {
+        OptionalGenericData<Map<String, Optional<String>>> data = new OptionalGenericData();
+        Map<String, Optional<String>> map = new HashMap<String, Optional<String>>();
+        map.put("a", Optional.<String>absent());
+        data.myData = Optional.of(map);
+        String value = mapperWithModule().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsString(data);
+
+        //this fails
+        assertEquals("{'myData':{}}", value);
+        //actual result: {'myData':{'a':null}}
+
+    }
+
+    public void testSerNonNullInMapWithOptional() throws Exception {
+        GenericData<Map<String, Optional<String>>> data = new GenericData();
+        Map<String, Optional<String>> map = new HashMap<String, Optional<String>>();
+        map.put("a", Optional.<String>absent());
+        data.myData = map;
+        String value = mapperWithModule().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsString(data);
+
+        //this fails
+        assertEquals("{'myData':{}}", value);
+        //actual result: {'myData':{'a':null}}
+    }
+
+    public void testSerNonNullInNestedInList() throws Exception {
+        GenericData<List<Optional<String>>> data = new GenericData();
+        List<Optional<String>> list = new ArrayList<Optional<String>>();
+        list.add(Optional.<String>absent());
+        data.myData = list;
+        String value = mapperWithModule().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsString(data);
+
+        //this fails
+        assertEquals("{'myData':[]}", value);
+        //actual result: {'myData':[null]}
+
+    }
+
+    public void testSerNonNullInNestOptional() throws Exception {
+        OptionalGenericData<Optional<String>> data = new OptionalGenericData<Optional<String>>();
+        Optional<String> string = Optional.absent();
+        data.myData = Optional.of(string);
+        String value = mapperWithModule().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsString(data);
+
+        //this fails
+        assertEquals("{}", value);
+        //actual result: {'myData':null}
     }
 }
